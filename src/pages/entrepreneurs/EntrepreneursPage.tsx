@@ -1,15 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter, MapPin } from 'lucide-react';
 import { Input } from '../../components/ui/Input';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { EntrepreneurCard } from '../../components/entrepreneur/EntrepreneurCard';
-import { entrepreneurs } from '../../data/users';
+import { Entrepreneur } from '../../types';
+import * as userService from '../../services/userService';
 
 export const EntrepreneursPage: React.FC = () => {
+  const [entrepreneurs, setEntrepreneurs] = useState<Entrepreneur[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [selectedFundingRange, setSelectedFundingRange] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchEntrepreneurs = async () => {
+      try {
+        const response = await userService.getEntrepreneurs();
+        if (response.success) {
+          setEntrepreneurs(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch entrepreneurs', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchEntrepreneurs();
+  }, []);
   
   // Get unique industries and funding ranges
   const allIndustries = Array.from(new Set(entrepreneurs.map(e => e.industry)));

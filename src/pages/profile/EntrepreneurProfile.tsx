@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { MessageCircle, Users, Calendar, Building2, MapPin, UserCircle, FileText, DollarSign, Send } from 'lucide-react';
 import { Avatar } from '../../components/ui/Avatar';
@@ -6,18 +6,43 @@ import { Button } from '../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { useAuth } from '../../context/AuthContext';
-import { findUserById } from '../../data/users';
+import * as userService from '../../services/userService';
 import { createCollaborationRequest, getRequestsFromInvestor } from '../../data/collaborationRequests';
 import { Entrepreneur } from '../../types';
 
 export const EntrepreneurProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user: currentUser } = useAuth();
+  const [entrepreneur, setEntrepreneur] = useState<Entrepreneur | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Fetch entrepreneur data
-  const entrepreneur = findUserById(id || '') as Entrepreneur | null;
+  useEffect(() => {
+    const fetchEntrepreneur = async () => {
+      if (!id) return;
+      try {
+        const response = await userService.getUserById(id);
+        if (response.success && response.data.role === 'entrepreneur') {
+          setEntrepreneur(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch entrepreneur', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchEntrepreneur();
+  }, [id]);
   
-  if (!entrepreneur || entrepreneur.role !== 'entrepreneur') {
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+  
+  if (!entrepreneur) {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold text-gray-900">Entrepreneur not found</h2>

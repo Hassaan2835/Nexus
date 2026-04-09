@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { MessageCircle, Building2, MapPin, UserCircle, BarChart3, Briefcase } from 'lucide-react';
 import { Avatar } from '../../components/ui/Avatar';
@@ -6,17 +6,42 @@ import { Button } from '../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { useAuth } from '../../context/AuthContext';
-import { findUserById } from '../../data/users';
+import * as userService from '../../services/userService';
 import { Investor } from '../../types';
 
 export const InvestorProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user: currentUser } = useAuth();
+  const [investor, setInvestor] = useState<Investor | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Fetch investor data
-  const investor = findUserById(id || '') as Investor | null;
+  useEffect(() => {
+    const fetchInvestor = async () => {
+      if (!id) return;
+      try {
+        const response = await userService.getUserById(id);
+        if (response.success && response.data.role === 'investor') {
+          setInvestor(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch investor', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInvestor();
+  }, [id]);
   
-  if (!investor || investor.role !== 'investor') {
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+  
+  if (!investor) {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold text-gray-900">Investor not found</h2>
