@@ -8,7 +8,7 @@ import { Avatar } from '../../components/ui/Avatar';
 import { useAuth } from '../../context/AuthContext';
 
 export const SettingsPage: React.FC = () => {
-  const { user, changePassword, toggle2fa } = useAuth();
+  const { user, changePassword, toggle2fa, updateProfile, isLoading } = useAuth();
   const [passwords, setPasswords] = React.useState({
     current: '',
     new: '',
@@ -16,14 +16,33 @@ export const SettingsPage: React.FC = () => {
   });
   const [isChangingPassword, setIsChangingPassword] = React.useState(false);
   const [isSavingProfile, setIsSavingProfile] = React.useState(false);
-  const { updateProfile } = useAuth();
   
   const [profileData, setProfileData] = React.useState({
-    name: user.name || '',
-    email: user.email || '',
-    bio: user.bio || '',
+    name: user?.name || '',
+    email: user?.email || '',
+    bio: user?.bio || '',
     location: 'San Francisco, CA' // Mock location
   });
+
+  // Update profile data when user is loaded or changes
+  React.useEffect(() => {
+    if (user) {
+      setProfileData(prev => ({
+        ...prev,
+        name: user.name || '',
+        email: user.email || '',
+        bio: user.bio || '',
+      }));
+    }
+  }, [user]);
+
+  if (isLoading || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
 
   const handlePasswordChange = async () => {
     if (passwords.new !== passwords.confirm) {
@@ -45,6 +64,7 @@ export const SettingsPage: React.FC = () => {
   };
 
   const handleProfileSave = async () => {
+    if (!user) return;
     setIsSavingProfile(true);
     try {
       await updateProfile(user.id, {
@@ -114,8 +134,8 @@ export const SettingsPage: React.FC = () => {
             <CardBody className="space-y-6">
               <div className="flex items-center gap-6">
                 <Avatar
-                  src={user.avatarUrl}
-                  alt={user.name}
+                  src={user?.avatarUrl}
+                  alt={user?.name}
                   size="xl"
                 />
                 
@@ -145,7 +165,7 @@ export const SettingsPage: React.FC = () => {
                 
                 <Input
                   label="Role"
-                  value={user.role}
+                  value={user?.role}
                   disabled
                 />
                 
@@ -170,9 +190,9 @@ export const SettingsPage: React.FC = () => {
               
               <div className="flex justify-end gap-3">
                 <Button variant="outline" onClick={() => setProfileData({
-                  name: user.name,
-                  email: user.email,
-                  bio: user.bio,
+                  name: user?.name || '',
+                  email: user?.email || '',
+                  bio: user?.bio || '',
                   location: 'San Francisco, CA'
                 })}>Cancel</Button>
                 <Button onClick={handleProfileSave} isLoading={isSavingProfile}>Save Changes</Button>
@@ -193,15 +213,15 @@ export const SettingsPage: React.FC = () => {
                     <p className="text-sm text-gray-600">
                       Add an extra layer of security to your account
                     </p>
-                    <Badge variant={user.isTwoFactorEnabled ? "success" : "error"} className="mt-1">
-                      {user.isTwoFactorEnabled ? 'Enabled' : 'Not Enabled'}
+                    <Badge variant={user?.isTwoFactorEnabled ? "success" : "error"} className="mt-1">
+                      {user?.isTwoFactorEnabled ? 'Enabled' : 'Not Enabled'}
                     </Badge>
                   </div>
                   <Button 
                     variant="outline"
                     onClick={() => toggle2fa()}
                   >
-                    {user.isTwoFactorEnabled ? 'Disable' : 'Enable'}
+                    {user?.isTwoFactorEnabled ? 'Disable' : 'Enable'}
                   </Button>
                 </div>
               </div>

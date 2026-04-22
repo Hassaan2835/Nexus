@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Search, Filter, MapPin } from 'lucide-react';
 import { Input } from '../../components/ui/Input';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
 import { EntrepreneurCard } from '../../components/entrepreneur/EntrepreneurCard';
 import { Entrepreneur } from '../../types';
 import * as userService from '../../services/userService';
@@ -172,12 +171,18 @@ export const EntrepreneursPage: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredEntrepreneurs.map(entrepreneur => (
-              <EntrepreneurCard
-                key={entrepreneur.id}
-                entrepreneur={entrepreneur}
-              />
-            ))}
+            {isLoading ? (
+              <div className="col-span-full py-12 text-center text-gray-500">Loading startups...</div>
+            ) : filteredEntrepreneurs.length > 0 ? (
+              filteredEntrepreneurs.map(entrepreneur => (
+                <EntrepreneurCard
+                  key={entrepreneur.id}
+                  entrepreneur={entrepreneur}
+                />
+              ))
+            ) : (
+              <div className="col-span-full py-12 text-center text-gray-500">No startups found matching your criteria.</div>
+            )}
           </div>
         </div>
       </div>
