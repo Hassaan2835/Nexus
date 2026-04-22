@@ -1,7 +1,10 @@
 const express = require('express');
+const path = require('path');
 const dotenv = require('dotenv');
 const morgan = require('morgan');
 const helmet = require('helmet');
+const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss-clean');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
@@ -14,6 +17,20 @@ dotenv.config();
 connectDB();
 
 const app = express();
+const server = require('http').createServer(app);
+const socketHandler = require('./socket');
+
+// Initialize Socket.IO
+socketHandler(server);
+
+// Set static folder
+app.use(express.static(path.join(__dirname, '../public')));
+
+// Sanitize data
+app.use(mongoSanitize());
+
+// Prevent XSS attacks
+app.use(xss());
 
 // Body parser
 app.use(express.json());
@@ -39,6 +56,10 @@ app.use(limiter);
 // Mount routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/meetings', require('./routes/meetings'));
+app.use('/api/documents', require('./routes/documents'));
+app.use('/api/payments', require('./routes/payments'));
+app.use('/api/messages', require('./routes/messages'));
 
 // Home route
 app.get('/', (req, res) => {
@@ -50,7 +71,7 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
 });
 

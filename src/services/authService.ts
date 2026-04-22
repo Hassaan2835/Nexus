@@ -20,3 +20,33 @@ export const logoutUser = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
 };
+
+export const forgotPassword = async (email: string) => {
+  const response = await api.post('/auth/forgotpassword', { email });
+  return response.data;
+};
+
+export const resetPassword = async (token: string, password: any) => {
+  const response = await api.put(`/auth/resetpassword/${token}`, { password });
+  return response.data;
+};
+
+export const updatePassword = async (passwordData: any) => {
+  const response = await api.put('/auth/updatepassword', passwordData);
+  return response.data;
+};
+
+export const toggle2fa = async () => {
+  const response = await api.put('/auth/toggle2fa');
+  return response.data;
+};
+
+export const verify2fa = async (verifyData: { email: string; code: string }) => {
+  const response = await api.post('/auth/verify2fa', verifyData);
+  return response.data;
+};
+
+export const updateDetails = async (details: any) => {
+  const response = await api.put('/auth/updatedetails', details);
+  return response.data;
+};

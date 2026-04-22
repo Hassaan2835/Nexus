@@ -8,9 +8,56 @@ import { Avatar } from '../../components/ui/Avatar';
 import { useAuth } from '../../context/AuthContext';
 
 export const SettingsPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, changePassword, toggle2fa } = useAuth();
+  const [passwords, setPasswords] = React.useState({
+    current: '',
+    new: '',
+    confirm: ''
+  });
+  const [isChangingPassword, setIsChangingPassword] = React.useState(false);
+  const [isSavingProfile, setIsSavingProfile] = React.useState(false);
+  const { updateProfile } = useAuth();
   
-  if (!user) return null;
+  const [profileData, setProfileData] = React.useState({
+    name: user.name || '',
+    email: user.email || '',
+    bio: user.bio || '',
+    location: 'San Francisco, CA' // Mock location
+  });
+
+  const handlePasswordChange = async () => {
+    if (passwords.new !== passwords.confirm) {
+      return alert('New passwords do not match');
+    }
+    if (!passwords.current || !passwords.new) {
+      return alert('Please fill in all password fields');
+    }
+
+    setIsChangingPassword(true);
+    try {
+      await changePassword(passwords.current, passwords.new);
+      setPasswords({ current: '', new: '', confirm: '' });
+    } catch (error) {
+      // toast is handled in context
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const handleProfileSave = async () => {
+    setIsSavingProfile(true);
+    try {
+      await updateProfile(user.id, {
+        name: profileData.name,
+        email: profileData.email,
+        bio: profileData.bio
+      });
+    } catch (error) {
+      // toast handled in context
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
   
   return (
     <div className="space-y-6 animate-fade-in">
@@ -85,13 +132,15 @@ export const SettingsPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Input
                   label="Full Name"
-                  defaultValue={user.name}
+                  value={profileData.name}
+                  onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
                 />
                 
                 <Input
                   label="Email"
                   type="email"
-                  defaultValue={user.email}
+                  value={profileData.email}
+                  onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
                 />
                 
                 <Input
@@ -102,7 +151,8 @@ export const SettingsPage: React.FC = () => {
                 
                 <Input
                   label="Location"
-                  defaultValue="San Francisco, CA"
+                  value={profileData.location}
+                  onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
                 />
               </div>
               
@@ -113,13 +163,19 @@ export const SettingsPage: React.FC = () => {
                 <textarea
                   className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
                   rows={4}
-                  defaultValue={user.bio}
+                  value={profileData.bio}
+                  onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
                 ></textarea>
               </div>
               
               <div className="flex justify-end gap-3">
-                <Button variant="outline">Cancel</Button>
-                <Button>Save Changes</Button>
+                <Button variant="outline" onClick={() => setProfileData({
+                  name: user.name,
+                  email: user.email,
+                  bio: user.bio,
+                  location: 'San Francisco, CA'
+                })}>Cancel</Button>
+                <Button onClick={handleProfileSave} isLoading={isSavingProfile}>Save Changes</Button>
               </div>
             </CardBody>
           </Card>
@@ -137,9 +193,16 @@ export const SettingsPage: React.FC = () => {
                     <p className="text-sm text-gray-600">
                       Add an extra layer of security to your account
                     </p>
-                    <Badge variant="error" className="mt-1">Not Enabled</Badge>
+                    <Badge variant={user.isTwoFactorEnabled ? "success" : "error"} className="mt-1">
+                      {user.isTwoFactorEnabled ? 'Enabled' : 'Not Enabled'}
+                    </Badge>
                   </div>
-                  <Button variant="outline">Enable</Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => toggle2fa()}
+                  >
+                    {user.isTwoFactorEnabled ? 'Disable' : 'Enable'}
+                  </Button>
                 </div>
               </div>
               
@@ -149,20 +212,31 @@ export const SettingsPage: React.FC = () => {
                   <Input
                     label="Current Password"
                     type="password"
+                    value={passwords.current}
+                    onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
                   />
                   
                   <Input
                     label="New Password"
                     type="password"
+                    value={passwords.new}
+                    onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
                   />
                   
                   <Input
                     label="Confirm New Password"
                     type="password"
+                    value={passwords.confirm}
+                    onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
                   />
                   
                   <div className="flex justify-end">
-                    <Button>Update Password</Button>
+                    <Button 
+                      onClick={handlePasswordChange}
+                      isLoading={isChangingPassword}
+                    >
+                      Update Password
+                    </Button>
                   </div>
                 </div>
               </div>

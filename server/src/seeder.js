@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
 const User = require('./models/User');
+const Meeting = require('./models/Meeting');
+const Document = require('./models/Document');
+const Transaction = require('./models/Transaction');
+const Conversation = require('./models/Conversation');
+const Message = require('./models/Message');
 
 // Load env vars
 dotenv.config();
@@ -23,7 +28,8 @@ const entrepreneurs = [
     location: 'San Francisco, CA',
     foundedYear: 2021,
     teamSize: '1-10',
-    isOnline: true
+    isOnline: true,
+    walletBalance: 2500
   },
   {
     name: 'David Chen',
@@ -38,37 +44,8 @@ const entrepreneurs = [
     location: 'Portland, OR',
     foundedYear: 2020,
     teamSize: '1-10',
-    isOnline: false
-  },
-  {
-    name: 'Maya Patel',
-    email: 'maya@healthpulse.com',
-    role: 'entrepreneur',
-    avatarUrl: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg',
-    bio: 'Former healthcare professional with an MBA. Building tech to improve patient care.',
-    startupName: 'HealthPulse',
-    pitchSummary: 'Mobile platform connecting patients with mental health professionals in real-time.',
-    fundingNeeded: '$800K',
-    industry: 'HealthTech',
-    location: 'Boston, MA',
-    foundedYear: 2022,
-    teamSize: '1-10',
-    isOnline: true
-  },
-  {
-    name: 'James Wilson',
-    email: 'james@urbanfarm.io',
-    role: 'entrepreneur',
-    avatarUrl: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg',
-    bio: 'Agricultural engineer focused on urban farming solutions and food security.',
-    startupName: 'UrbanFarm',
-    pitchSummary: 'IoT-enabled vertical farming systems for urban environments and food deserts.',
-    fundingNeeded: '$3M',
-    industry: 'AgTech',
-    location: 'Chicago, IL',
-    foundedYear: 2019,
-    teamSize: '11-50',
-    isOnline: false
+    isOnline: false,
+    walletBalance: 1200
   }
 ];
 
@@ -88,7 +65,8 @@ const investors = [
     totalInvestments: 12,
     minimumInvestment: '$250K',
     maximumInvestment: '$1.5M',
-    isOnline: true
+    isOnline: true,
+    walletBalance: 50000
   },
   {
     name: 'Jennifer Lee',
@@ -104,40 +82,117 @@ const investors = [
     totalInvestments: 18,
     minimumInvestment: '$500K',
     maximumInvestment: '$3M',
-    isOnline: false
-  },
-  {
-    name: 'Robert Torres',
-    email: 'robert@healthventures.com',
-    role: 'investor',
-    avatarUrl: 'https://images.pexels.com/photos/834863/pexels-photo-834863.jpeg',
-    bio: 'Healthcare-focused investor with medical background. Looking for innovations in patient care and biotech.',
-    investmentInterests: ['HealthTech', 'BioTech', 'Medical Devices'],
-    investmentStage: ['Series A', 'Series B'],
-    portfolioCompanies: [
-        { name: 'MediTrack', industry: 'HealthTech' }
-    ],
-    totalInvestments: 9,
-    minimumInvestment: '$1M',
-    maximumInvestment: '$5M',
-    isOnline: true
+    isOnline: false,
+    walletBalance: 75000
   }
 ];
 
 const importData = async () => {
   try {
     await User.deleteMany();
+    await Meeting.deleteMany();
+    await Document.deleteMany();
+    await Transaction.deleteMany();
+    await Conversation.deleteMany();
+    await Message.deleteMany();
 
     const password = await bcrypt.hash('password123', 10);
     
-    const users = [...entrepreneurs, ...investors].map(user => ({
+    const userList = [...entrepreneurs, ...investors].map(user => ({
       ...user,
       password
     }));
 
-    await User.insertMany(users);
+    const createdUsers = await User.insertMany(userList);
+    const sarah = createdUsers.find(u => u.email === 'sarah@techwave.io');
+    const michael = createdUsers.find(u => u.email === 'michael@vcinnovate.com');
+    const david = createdUsers.find(u => u.email === 'david@greenlife.co');
 
-    console.log('Data Imported!');
+    // Seed Meetings
+    await Meeting.create([
+      {
+        title: 'TechWave AI Pitch Session',
+        organizer: sarah._id,
+        participants: [michael._id],
+        date: new Date(Date.now() + 24 * 60 * 60 * 1000), 
+        startTime: '10:00',
+        endTime: '11:00',
+        status: 'accepted',
+        description: 'Detailed walkthrough of the financial analytics platform.'
+      },
+      {
+        title: 'Initial Consultation',
+        organizer: david._id,
+        participants: [michael._id],
+        date: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        startTime: '14:30',
+        endTime: '15:00',
+        status: 'pending',
+        description: 'Discussing GreenLife market opportunity.'
+      }
+    ]);
+
+    // Seed Documents
+    await Document.create([
+      {
+        name: 'TechWave_PitchDeck_v2.pdf',
+        owner: sarah._id,
+        fileUrl: '/uploads/demo-deck.pdf',
+        fileType: 'application/pdf',
+        fileSize: 4500000,
+        sharedWith: [michael._id]
+      },
+      {
+        name: 'Partnership_Agreement.docx',
+        owner: michael._id,
+        fileUrl: '/uploads/agreement.docx',
+        fileType: 'application/msword',
+        fileSize: 120000,
+        sharedWith: [sarah._id]
+      }
+    ]);
+
+    // Seed Transactions
+    await Transaction.create([
+      {
+        user: sarah._id,
+        type: 'deposit',
+        amount: 2500,
+        description: 'Initial wallet funding',
+        status: 'completed'
+      },
+      {
+        user: michael._id,
+        type: 'deposit',
+        amount: 50000,
+        description: 'Primary investment wallet',
+        status: 'completed'
+      }
+    ]);
+
+    // Seed Chat
+    const conversation = await Conversation.create({
+      participants: [sarah._id, michael._id]
+    });
+
+    const msg1 = await Message.create({
+      conversation: conversation._id,
+      sender: sarah._id,
+      receiver: michael._id,
+      content: 'Hi Michael! Looking forward to our meeting tomorrow.'
+    });
+
+    const msg2 = await Message.create({
+      conversation: conversation._id,
+      sender: michael._id,
+      receiver: sarah._id,
+      content: 'Likewise Sarah. I reviewed your pitch deck and have some questions about the AI model.'
+    });
+
+    conversation.lastMessage = msg2._id;
+    await conversation.save();
+
+    console.log('Comprehensive Data Imported!');
     process.exit();
   } catch (error) {
     console.error(`Error: ${error.message}`);
@@ -148,6 +203,11 @@ const importData = async () => {
 const destroyData = async () => {
   try {
     await User.deleteMany();
+    await Meeting.deleteMany();
+    await Document.deleteMany();
+    await Transaction.deleteMany();
+    await Conversation.deleteMany();
+    await Message.deleteMany();
     console.log('Data Destroyed!');
     process.exit();
   } catch (error) {

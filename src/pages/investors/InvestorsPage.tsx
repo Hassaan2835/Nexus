@@ -160,7 +160,12 @@ export const InvestorsPage: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredInvestors.map(investor => (
+            {isLoading ? (
+              <div className="col-span-2 py-12 text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+                <p className="text-gray-500">Finding investors...</p>
+              </div>
+            ) : filteredInvestors.map(investor => (
               <InvestorCard
                 key={investor.id}
                 investor={investor}

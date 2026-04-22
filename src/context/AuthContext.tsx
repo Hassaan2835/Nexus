@@ -42,17 +42,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
   }, []);
 
-  const login = async (email: string, password: string, role: UserRole): Promise<void> => {
+  const login = async (email: string, password: string, role: UserRole): Promise<any> => {
     setIsLoading(true);
     try {
       const response = await authService.loginUser({ email, password, role });
       
+      if (response.requiresTwoFactor) {
+        return { requiresTwoFactor: true, email: response.email };
+      }
+
       if (response.success) {
         const { token, user: userData } = response;
         setUser(userData);
         localStorage.setItem(TOKEN_KEY, token);
         localStorage.setItem(USER_KEY, JSON.stringify(userData));
         toast.success('Successfully logged in!');
+        return { success: true };
       }
     } catch (error: any) {
       const message = error.response?.data?.error || 'Login failed';
@@ -86,18 +91,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const forgotPassword = async (email: string): Promise<void> => {
     try {
-      // For now, this just calls the mock behavior or a real endpoint if we add it
+      await authService.forgotPassword(email);
       toast.success('Password reset instructions sent to your email');
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Reset failed');
+      throw error;
     }
   };
 
   const resetPassword = async (token: string, newPassword: string): Promise<void> => {
     try {
-      toast.success('Password reset successfully');
+      const response = await authService.resetPassword(token, newPassword);
+      if (response.success) {
+        toast.success('Password reset successfully');
+      }
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Reset failed');
+      throw error;
+    }
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<void> => {
+    try {
+      const response = await authService.updatePassword({ currentPassword, newPassword });
+      if (response.success) {
+        toast.success('Password updated successfully');
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Update failed');
+      throw error;
     }
   };
 
@@ -123,6 +145,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const toggle2fa = async (): Promise<void> => {
+    try {
+      const response = await authService.toggle2fa();
+      if (response.success) {
+        const updatedUser = { ...user!, isTwoFactorEnabled: response.data.isTwoFactorEnabled };
+        setUser(updatedUser);
+        localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+        toast.success(`2FA ${response.data.isTwoFactorEnabled ? 'enabled' : 'disabled'}`);
+      }
+    } catch (error: any) {
+      toast.error('Failed to toggle 2FA');
+    }
+  };
+
+  const verify2fa = async (email: string, code: string): Promise<void> => {
+    setIsLoading(true);
+    try {
+      const response = await authService.verify2fa({ email, code });
+      if (response.success) {
+        const { token, user: userData } = response;
+        setUser(userData);
+        localStorage.setItem(TOKEN_KEY, token);
+        localStorage.setItem(USER_KEY, JSON.stringify(userData));
+        toast.success('2FA Verified! Logged in.');
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.error || 'Verification failed';
+      toast.error(message);
+      throw new Error(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const value = {
     user,
     login,
@@ -130,6 +186,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     forgotPassword,
     resetPassword,
+    changePassword,
+    toggle2fa,
+    verify2fa,
     updateProfile,
     isAuthenticated: !!user,
     isLoading
