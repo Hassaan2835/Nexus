@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Calendar as CalendarIcon, Clock, Users, Plus, ChevronLeft, ChevronRight, Check, X, Video } from 'lucide-react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameMonth, isSameDay, addDays, parseISO } from 'date-fns';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
@@ -7,14 +8,28 @@ import { Badge } from '../../components/ui/Badge';
 import { Avatar } from '../../components/ui/Avatar';
 import { useAuth } from '../../context/AuthContext';
 import * as meetingService from '../../services/meetingService';
+import * as userService from '../../services/userService';
+import { Modal } from '../../components/ui/Modal';
+import { Input } from '../../components/ui/Input';
 import toast from 'react-hot-toast';
 
 export const MeetingsPage: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [meetings, setMeetings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [newMeeting, setNewMeeting] = useState({
+    title: '',
+    description: '',
+    date: format(new Date(), 'yyyy-MM-dd'),
+    startTime: '10:00',
+    endTime: '11:00',
+    participants: [] as string[]
+  });
 
   useEffect(() => {
     fetchMeetings();
@@ -32,6 +47,24 @@ export const MeetingsPage: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  const fetchUsers = async () => {
+    try {
+      const roleToFetch = user?.role === 'entrepreneur' ? 'investor' : 'entrepreneur';
+      const response = roleToFetch === 'investor' ? await userService.getInvestors() : await userService.getEntrepreneurs();
+      if (response.success) {
+        setAllUsers(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch users');
+    }
+  };
+
+  useEffect(() => {
+    if (isModalOpen) {
+      fetchUsers();
+    }
+  }, [isModalOpen]);
 
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
@@ -55,7 +88,7 @@ export const MeetingsPage: React.FC = () => {
               <ChevronRight size={20} />
             </button>
           </div>
-          <Button leftIcon={<Plus size={18} />}>
+          <Button leftIcon={<Plus size={18} />} onClick={() => setIsModalOpen(true)}>
             Schedule Meeting
           </Button>
         </div>
@@ -151,46 +184,56 @@ export const MeetingsPage: React.FC = () => {
           {selectedMonthMeetings.length > 0 ? (
             <div className="space-y-4">
               {selectedMonthMeetings.map(m => (
-                <div key={m._id} className="p-4 rounded-xl border border-gray-100 bg-gray-50/50 hover:bg-gray-50 transition-colors">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{m.title}</h3>
-                      <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
-                        <span className="flex items-center gap-1">
-                          <Clock size={14} />
+                <div key={m._id} className="p-5 rounded-2xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-200 group">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="space-y-1">
+                      <h3 className="font-bold text-gray-900 group-hover:text-primary-600 transition-colors">{m.title}</h3>
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                        <span className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-md">
+                          <Clock size={12} className="text-primary-500" />
                           {m.startTime} - {m.endTime}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <Video size={14} />
+                        <span className="flex items-center gap-1.5 bg-primary-50 text-primary-700 px-2 py-1 rounded-md">
+                          <Video size={12} />
                           Video Call
                         </span>
                       </div>
                     </div>
-                    <Badge variant={m.status === 'accepted' ? 'success' : m.status === 'pending' ? 'secondary' : 'error'}>
+                    <Badge variant={m.status === 'accepted' ? 'success' : m.status === 'pending' ? 'secondary' : 'error'} className="shadow-sm">
                       {m.status.toUpperCase()}
                     </Badge>
                   </div>
                   
-                  <div className="flex items-center justify-between">
-                    <div className="flex -space-x-2">
-                       <Avatar src={m.organizer.avatarUrl} alt={m.organizer.name} size="xs" className="ring-2 ring-white" />
-                       {m.participants.map((p: any) => (
-                         <Avatar key={p._id} src={p.avatarUrl} alt={p.name} size="xs" className="ring-2 ring-white" />
-                       ))}
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Participants</span>
+                      <div className="flex -space-x-2">
+                         <Avatar src={m.organizer.avatarUrl} alt={m.organizer.name} size="xs" className="ring-2 ring-white" />
+                         {m.participants.map((p: any) => (
+                           <Avatar key={p._id} src={p.avatarUrl} alt={p.name} size="xs" className="ring-2 ring-white" />
+                         ))}
+                      </div>
                     </div>
                     
                     <div className="flex gap-2">
                        {m.status === 'pending' && m.organizer._id !== user?.id && (
-                         <>
-                           <Button size="sm" variant="outline" className="text-error-600 border-error-100 hover:bg-error-50 p-2 h-auto" onClick={() => handleStatusUpdate(m._id, 'rejected')}>
+                         <div className="flex gap-1">
+                           <Button size="sm" variant="outline" className="text-error-600 border-error-100 hover:bg-error-50 p-2 h-9 w-9 rounded-xl flex items-center justify-center" onClick={() => handleStatusUpdate(m._id, 'rejected')}>
                              <X size={16} />
                            </Button>
-                           <Button size="sm" variant="outline" className="text-success-600 border-success-100 hover:bg-success-50 p-2 h-auto" onClick={() => handleStatusUpdate(m._id, 'accepted')}>
+                           <Button size="sm" variant="outline" className="text-success-600 border-success-100 hover:bg-success-50 p-2 h-9 w-9 rounded-xl flex items-center justify-center" onClick={() => handleStatusUpdate(m._id, 'accepted')}>
                              <Check size={16} />
                            </Button>
-                         </>
+                         </div>
                        )}
-                       <Button size="sm" variant="secondary" className="h-auto py-1 px-3">Join</Button>
+                       <Button 
+                         size="sm" 
+                         variant="primary" 
+                         className="h-9 px-4 rounded-xl shadow-lg shadow-primary-600/10"
+                         onClick={() => handleJoinMeeting(m)}
+                       >
+                         Join Call
+                       </Button>
                     </div>
                   </div>
                 </div>
@@ -210,6 +253,32 @@ export const MeetingsPage: React.FC = () => {
     );
   };
 
+  const handleScheduleMeeting = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMeeting.title || newMeeting.participants.length === 0) {
+      return toast.error('Please fill in all fields');
+    }
+
+    try {
+      const response = await meetingService.createMeeting(newMeeting);
+      if (response.success) {
+        toast.success('Meeting scheduled successfully');
+        setIsModalOpen(false);
+        setNewMeeting({
+          title: '',
+          description: '',
+          date: format(new Date(), 'yyyy-MM-dd'),
+          startTime: '10:00',
+          endTime: '11:00',
+          participants: []
+        });
+        fetchMeetings();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to schedule meeting');
+    }
+  };
+
   const handleStatusUpdate = async (id: string, status: string) => {
     try {
       const response = await meetingService.updateMeetingStatus(id, status);
@@ -220,6 +289,16 @@ export const MeetingsPage: React.FC = () => {
     } catch (error) {
        toast.error('Action failed');
     }
+  };
+
+  const handleJoinMeeting = (meeting: any) => {
+    if (meeting.status !== 'accepted' && meeting.organizer._id !== user?.id) {
+      return toast.error('Meeting must be accepted before joining');
+    }
+    
+    // Generate a consistent roomId from meeting ID
+    const roomId = meeting._id || meeting.id;
+    navigate(`/video-call/${roomId}`);
   };
 
   return (
@@ -235,7 +314,70 @@ export const MeetingsPage: React.FC = () => {
         <div className="lg:col-span-1">
           {renderSelectedDayMeetings()}
         </div>
-      </div>
+        
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        title="Schedule New Meeting"
+      >
+        <form onSubmit={handleScheduleMeeting} className="space-y-4">
+          <Input
+            label="Meeting Title"
+            placeholder="Investment Discussion"
+            value={newMeeting.title}
+            onChange={(e) => setNewMeeting({...newMeeting, title: e.target.value})}
+            required
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Date"
+              type="date"
+              value={newMeeting.date}
+              onChange={(e) => setNewMeeting({...newMeeting, date: e.target.value})}
+              required
+            />
+            <div className="flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Participant</label>
+              <select 
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val && !newMeeting.participants.includes(val)) {
+                    setNewMeeting({...newMeeting, participants: [val]}); // Simple single participant for now
+                  }
+                }}
+                required
+              >
+                <option value="">Select a {user?.role === 'entrepreneur' ? 'Investor' : 'Entrepreneur'}</option>
+                {allUsers.map(u => (
+                  <option key={u._id} value={u._id}>{u.name} ({u.role})</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Start Time"
+              type="time"
+              value={newMeeting.startTime}
+              onChange={(e) => setNewMeeting({...newMeeting, startTime: e.target.value})}
+              required
+            />
+            <Input
+              label="End Time"
+              type="time"
+              value={newMeeting.endTime}
+              onChange={(e) => setNewMeeting({...newMeeting, endTime: e.target.value})}
+              required
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="outline" type="button" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+            <Button type="submit">Schedule</Button>
+          </div>
+        </form>
+      </Modal>
+    </div>
     </div>
   );
 };

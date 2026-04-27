@@ -7,6 +7,7 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   startAdornment?: React.ReactNode;
   endAdornment?: React.ReactNode;
   fullWidth?: boolean;
+  inputClassName?: string;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(({
@@ -17,6 +18,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
   endAdornment,
   fullWidth = false,
   className = '',
+  inputClassName = '',
   ...props
 }, ref) => {
   
@@ -43,7 +45,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
         
         <input
           ref={ref}
-          className={`${inputBaseClass} ${adornmentClass} ${widthClass}`}
+          className={`${inputBaseClass} ${adornmentClass} ${widthClass} ${inputClassName}`}
           {...props}
         />
         

@@ -12,6 +12,7 @@ export const InvestorsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStages, setSelectedStages] = useState<string[]>([]);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -34,6 +35,7 @@ export const InvestorsPage: React.FC = () => {
   // Get unique investment stages and interests
   const allStages = Array.from(new Set(investors.flatMap(i => i.investmentStage)));
   const allInterests = Array.from(new Set(investors.flatMap(i => i.investmentInterests)));
+  const allLocations = Array.from(new Set(investors.map(i => i.location))).filter(Boolean);
   
   // Filter investors based on search and filters
   const filteredInvestors = investors.filter(investor => {
@@ -50,7 +52,10 @@ export const InvestorsPage: React.FC = () => {
     const matchesInterests = selectedInterests.length === 0 ||
       investor.investmentInterests.some(interest => selectedInterests.includes(interest));
     
-    return matchesSearch && matchesStages && matchesInterests;
+    const matchesLocation = selectedLocations.length === 0 ||
+      selectedLocations.includes(investor.location);
+    
+    return matchesSearch && matchesStages && matchesInterests && matchesLocation;
   });
   
   const toggleStage = (stage: string) => {
@@ -66,6 +71,14 @@ export const InvestorsPage: React.FC = () => {
       prev.includes(interest)
         ? prev.filter(i => i !== interest)
         : [...prev, interest]
+    );
+  };
+
+  const toggleLocation = (location: string) => {
+    setSelectedLocations(prev => 
+      prev.includes(location)
+        ? prev.filter(l => l !== location)
+        : [...prev, location]
     );
   };
   
@@ -122,18 +135,22 @@ export const InvestorsPage: React.FC = () => {
               <div>
                 <h3 className="text-sm font-medium text-gray-900 mb-2">Location</h3>
                 <div className="space-y-2">
-                  <button className="flex items-center w-full text-left px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-50">
-                    <MapPin size={16} className="mr-2" />
-                    San Francisco, CA
-                  </button>
-                  <button className="flex items-center w-full text-left px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-50">
-                    <MapPin size={16} className="mr-2" />
-                    New York, NY
-                  </button>
-                  <button className="flex items-center w-full text-left px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-50">
-                    <MapPin size={16} className="mr-2" />
-                    Boston, MA
-                  </button>
+                  {allLocations.length > 0 ? allLocations.map(location => (
+                    <button
+                      key={location}
+                      onClick={() => toggleLocation(location)}
+                      className={`flex items-center w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                        selectedLocations.includes(location)
+                          ? 'bg-primary-50 text-primary-700 font-medium'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <MapPin size={16} className="mr-2" />
+                      {location}
+                    </button>
+                  )) : (
+                    <p className="text-xs text-gray-500 italic px-3">No locations found</p>
+                  )}
                 </div>
               </div>
             </CardBody>

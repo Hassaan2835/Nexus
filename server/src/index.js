@@ -33,7 +33,8 @@ app.use(mongoSanitize());
 app.use(xss());
 
 // Body parser
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Dev logging middleware
 if (process.env.NODE_ENV === 'development') {
@@ -60,6 +61,7 @@ app.use('/api/meetings', require('./routes/meetings'));
 app.use('/api/documents', require('./routes/documents'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/messages', require('./routes/messages'));
+app.use('/api/collaboration', require('./routes/collaboration'));
 
 // Home route
 app.get('/', (req, res) => {

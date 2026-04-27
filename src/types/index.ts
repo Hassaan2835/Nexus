@@ -2,6 +2,7 @@ export type UserRole = 'entrepreneur' | 'investor';
 
 export interface User {
   id: string;
+  _id?: string;
   name: string;
   email: string;
   role: UserRole;
@@ -52,6 +53,7 @@ export interface ChatConversation {
 
 export interface CollaborationRequest {
   id: string;
+  _id?: string;
   investorId: string;
   entrepreneurId: string;
   message: string;

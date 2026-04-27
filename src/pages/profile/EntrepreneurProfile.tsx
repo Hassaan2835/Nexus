@@ -7,32 +7,42 @@ import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { useAuth } from '../../context/AuthContext';
 import * as userService from '../../services/userService';
-import { createCollaborationRequest, getRequestsFromInvestor } from '../../data/collaborationRequests';
-import { Entrepreneur } from '../../types';
+import * as collaborationService from '../../services/collaborationService';
+import { Entrepreneur, CollaborationRequest } from '../../types';
+import toast from 'react-hot-toast';
 
 export const EntrepreneurProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user: currentUser } = useAuth();
   const [entrepreneur, setEntrepreneur] = useState<Entrepreneur | null>(null);
+  const [requests, setRequests] = useState<CollaborationRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const isInvestor = currentUser?.role === 'investor';
   
   useEffect(() => {
-    const fetchEntrepreneur = async () => {
+    const fetchEntrepreneurData = async () => {
       if (!id) return;
       try {
-        const response = await userService.getUserById(id);
-        if (response.success && response.data.role === 'entrepreneur') {
-          setEntrepreneur(response.data);
+        const [userRes, requestsRes] = await Promise.all([
+          userService.getUserById(id),
+          isInvestor ? collaborationService.getRequests() : Promise.resolve({ success: true, data: [] })
+        ]);
+        
+        if (userRes.success && userRes.data.role === 'entrepreneur') {
+          setEntrepreneur(userRes.data);
+        }
+        if (requestsRes.success) {
+          setRequests(requestsRes.data);
         }
       } catch (error) {
-        console.error('Failed to fetch entrepreneur', error);
+        console.error('Failed to fetch data', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchEntrepreneur();
-  }, [id]);
+    fetchEntrepreneurData();
+  }, [id, isInvestor]);
   
   if (isLoading) {
     return (
@@ -54,25 +64,29 @@ export const EntrepreneurProfile: React.FC = () => {
     );
   }
   
-  const isCurrentUser = currentUser?.id === entrepreneur.id;
-  const isInvestor = currentUser?.role === 'investor';
+  const entrepreneurId = entrepreneur._id || entrepreneur.id;
+  const isCurrentUser = currentUser?.id === entrepreneurId;
   
   // Check if the current investor has already sent a request to this entrepreneur
   const hasRequestedCollaboration = isInvestor && id 
-    ? getRequestsFromInvestor(currentUser.id).some(req => req.entrepreneurId === id)
+    ? requests.some(req => req.entrepreneurId === id)
     : false;
   
-  const handleSendRequest = () => {
+  const handleSendRequest = async () => {
     if (isInvestor && currentUser && id) {
-      createCollaborationRequest(
-        currentUser.id,
-        id,
-        `I'm interested in learning more about ${entrepreneur.startupName} and would like to explore potential investment opportunities.`
-      );
-      
-      // In a real app, we would refresh the data or update state
-      // For this demo, we'll force a page reload
-      window.location.reload();
+      try {
+        const response = await collaborationService.createRequest({
+          entrepreneurId: id,
+          message: `I'm interested in learning more about ${entrepreneur?.startupName} and would like to explore potential investment opportunities.`
+        });
+        
+        if (response.success) {
+          toast.success('Collaboration request sent');
+          setRequests([...requests, response.data]);
+        }
+      } catch (error) {
+        toast.error('Failed to send request');
+      }
     }
   };
   
@@ -118,7 +132,7 @@ export const EntrepreneurProfile: React.FC = () => {
           <div className="mt-6 sm:mt-0 flex flex-col sm:flex-row gap-2 justify-center sm:justify-end">
             {!isCurrentUser && (
               <>
-                <Link to={`/chat/${entrepreneur.id}`}>
+                <Link to={`/chat/${entrepreneurId}`}>
                   <Button
                     variant="outline"
                     leftIcon={<MessageCircle size={18} />}
@@ -140,12 +154,14 @@ export const EntrepreneurProfile: React.FC = () => {
             )}
             
             {isCurrentUser && (
-              <Button
-                variant="outline"
-                leftIcon={<UserCircle size={18} />}
-              >
-                Edit Profile
-              </Button>
+              <Link to="/settings">
+                <Button
+                  variant="outline"
+                  leftIcon={<UserCircle size={18} />}
+                >
+                  Edit Profile
+                </Button>
+              </Link>
             )}
           </div>
         </CardBody>

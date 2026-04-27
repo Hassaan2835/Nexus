@@ -5,14 +5,22 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import * as paymentService from '../../services/paymentService';
+import { useAuth } from '../../context/AuthContext';
+import * as userService from '../../services/userService';
+import { Modal } from '../../components/ui/Modal';
 import toast from 'react-hot-toast';
 
 export const PaymentsPage: React.FC = () => {
+  const { user } = useAuth();
   const [walletInfo, setWalletInfo] = useState<any>({ balance: 0, transactions: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [isDepositing, setIsDepositing] = useState(false);
+  const [isTransferring, setIsTransferring] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
   const [showDepositModal, setShowDepositModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferData, setTransferData] = useState({ amount: '', recipientId: '', description: '' });
+  const [partners, setPartners] = useState<any[]>([]);
 
   useEffect(() => {
     fetchWalletInfo();
@@ -33,6 +41,23 @@ export const PaymentsPage: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  const fetchPartners = async () => {
+    try {
+      const response = user?.role === 'entrepreneur' ? await userService.getInvestors() : await userService.getEntrepreneurs();
+      if (response.success) {
+        setPartners(response.data);
+      }
+    } catch (error) {
+       console.error('Failed to fetch partners');
+    }
+  };
+
+  useEffect(() => {
+    if (showTransferModal) {
+      fetchPartners();
+    }
+  }, [showTransferModal]);
 
   const handleDeposit = async () => {
     const amount = parseFloat(depositAmount);
@@ -56,6 +81,44 @@ export const PaymentsPage: React.FC = () => {
     }
   };
 
+  const handleTransfer = async () => {
+    const amount = parseFloat(transferData.amount);
+    if (isNaN(amount) || amount <= 0 || !transferData.recipientId) {
+      return toast.error('Please fill in all fields correctly');
+    }
+    if (amount > walletInfo.balance) {
+      return toast.error('Insufficient balance');
+    }
+
+    setIsTransferring(true);
+    try {
+      const response = await paymentService.transferFunds({
+        amount,
+        recipientId: transferData.recipientId,
+        description: transferData.description || (user?.role === 'investor' ? 'Investment' : 'Fund Transfer'),
+        type: user?.role === 'investor' ? 'investment' : 'transfer'
+      });
+      if (response.success) {
+        toast.success(`Succesfully transferred $${amount}`);
+        setTransferData({ amount: '', recipientId: '', description: '' });
+        setShowTransferModal(false);
+        fetchWalletInfo();
+      }
+    } catch (error: any) {
+        toast.error(error.response?.data?.error || 'Transfer failed');
+    } finally {
+      setIsTransferring(false);
+    }
+  };
+
+  const totalInvested = walletInfo.transactions
+    .filter((tx: any) => tx.type === 'investment' && tx.sender === user?.id)
+    .reduce((acc: number, tx: any) => acc + tx.amount, 0);
+
+  const totalReceived = walletInfo.transactions
+    .filter((tx: any) => (tx.type === 'investment' || tx.type === 'transfer') && tx.receiver === user?.id)
+    .reduce((acc: number, tx: any) => acc + tx.amount, 0);
+
   return (
     <div className="space-y-6 animate-fade-in pb-10">
       <div className="flex justify-between items-center">
@@ -64,7 +127,7 @@ export const PaymentsPage: React.FC = () => {
           <p className="text-gray-600">Manage your funds and investment history</p>
         </div>
         <div className="flex gap-3">
-           <Button variant="outline" leftIcon={<History size={18} />}>Statement</Button>
+           <Button variant="outline" onClick={() => setShowTransferModal(true)}>{user?.role === 'investor' ? 'Invest Funds' : 'Transfer Funds'}</Button>
            <Button leftIcon={<Plus size={18} />} onClick={() => setShowDepositModal(true)}>Add Funds</Button>
         </div>
       </div>
@@ -85,7 +148,7 @@ export const PaymentsPage: React.FC = () => {
             <div className="flex justify-between items-end">
                <div>
                   <p className="text-white/60 text-[10px] uppercase tracking-widest mb-1">Account Holder</p>
-                  <p className="font-semibold text-sm">SARAH JENKINS</p>
+                  <p className="font-semibold text-sm uppercase">{user?.name}</p>
                </div>
                <div className="flex -space-x-2">
                    <div className="w-8 h-8 rounded-full border-2 border-white/20 bg-white/10 flex items-center justify-center backdrop-blur-sm">
@@ -106,8 +169,8 @@ export const PaymentsPage: React.FC = () => {
                     </div>
                     <span className="text-sm font-medium text-gray-600">Total Investments</span>
                  </div>
-                 <h3 className="text-2xl font-bold text-gray-900">$45,200.00</h3>
-                 <p className="text-xs text-success-600 mt-1 font-medium">+12.5% from last month</p>
+                 <h3 className="text-2xl font-bold text-gray-900">${totalInvested.toLocaleString()}</h3>
+                 <p className="text-xs text-gray-500 mt-1">Total outflow from wallet</p>
               </div>
               <div className="border-l border-gray-100 pl-6">
                  <div className="flex items-center gap-3 mb-4">
@@ -116,8 +179,8 @@ export const PaymentsPage: React.FC = () => {
                     </div>
                     <span className="text-sm font-medium text-gray-600">Total Received</span>
                  </div>
-                 <h3 className="text-2xl font-bold text-gray-900">$12,850.00</h3>
-                 <p className="text-xs text-gray-500 mt-1">From 4 different startups</p>
+                 <h3 className="text-2xl font-bold text-gray-900">${totalReceived.toLocaleString()}</h3>
+                 <p className="text-xs text-gray-500 mt-1">Total inflow to wallet</p>
               </div>
            </CardBody>
         </Card>
@@ -142,9 +205,9 @@ export const PaymentsPage: React.FC = () => {
                 <div key={tx._id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-4">
                     <div className={`p-3 rounded-xl ${
-                      tx.type === 'deposit' ? 'bg-success-50 text-success-600' : 'bg-gray-100 text-gray-600'
+                      tx.type === 'deposit' || (tx.type === 'transfer' && tx.receiver === user?.id) || (tx.type === 'investment' && tx.receiver === user?.id) ? 'bg-success-50 text-success-600' : 'bg-gray-100 text-gray-600'
                     }`}>
-                      {tx.type === 'deposit' ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
+                      {tx.type === 'deposit' || tx.receiver === user?.id ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
                     </div>
                     <div>
                       <h4 className="font-semibold text-gray-900 leading-tight">{tx.description}</h4>
@@ -153,9 +216,9 @@ export const PaymentsPage: React.FC = () => {
                   </div>
                   <div className="text-right">
                     <span className={`font-bold text-lg ${
-                       tx.type === 'deposit' ? 'text-success-600' : 'text-gray-900'
+                       tx.type === 'deposit' || tx.receiver === user?.id ? 'text-success-600' : 'text-gray-900'
                     }`}>
-                      {tx.type === 'deposit' ? '+' : '-'}${tx.amount.toLocaleString()}
+                      {tx.type === 'deposit' || tx.receiver === user?.id ? '+' : '-'}${tx.amount.toLocaleString()}
                     </span>
                     <p className="text-[10px] text-gray-400 mt-1">ID: #{tx._id.substring(tx._id.length - 8).toUpperCase()}</p>
                   </div>
@@ -174,51 +237,85 @@ export const PaymentsPage: React.FC = () => {
         </CardBody>
       </Card>
 
+      {/* Transfer Modal */}
+      <Modal
+        isOpen={showTransferModal}
+        onClose={() => setShowTransferModal(false)}
+        title={user?.role === 'investor' ? 'Make an Investment' : 'Transfer Funds'}
+      >
+        <div className="space-y-4">
+          <div className="flex flex-col">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Recipient</label>
+            <select 
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              value={transferData.recipientId}
+              onChange={(e) => setTransferData({...transferData, recipientId: e.target.value})}
+            >
+              <option value="">Select a {user?.role === 'entrepreneur' ? 'Investor' : 'Startup'}</option>
+              {partners.map(p => (
+                <option key={p._id} value={p._id}>{p.name} ({p.role})</option>
+              ))}
+            </select>
+          </div>
+          <Input 
+            label="Amount ($)"
+            type="number"
+            value={transferData.amount}
+            onChange={(e) => setTransferData({...transferData, amount: e.target.value})}
+            placeholder="0.00"
+          />
+          <Input 
+            label="Description"
+            value={transferData.description}
+            onChange={(e) => setTransferData({...transferData, description: e.target.value})}
+            placeholder="Investment for seed round"
+          />
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="outline" onClick={() => setShowTransferModal(false)}>Cancel</Button>
+            <Button onClick={handleTransfer} isLoading={isTransferring}>Confirm Transfer</Button>
+          </div>
+        </div>
+      </Modal>
+
       {/* Deposit Modal */}
-      {showDepositModal && (
-         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <Card className="max-w-md w-full animate-scale-up shadow-2xl">
-               <CardHeader className="flex justify-between items-center">
-                  <h2 className="text-xl font-bold">Add Funds to Wallet</h2>
-                  <button onClick={() => setShowDepositModal(false)} className="text-gray-400 hover:text-gray-700">
-                     <Plus size={24} className="rotate-45" />
-                  </button>
-               </CardHeader>
-               <CardBody className="space-y-6">
-                  <div className="p-4 bg-primary-50 rounded-xl flex items-center gap-4 border border-primary-100 text-primary-700">
-                     <DollarSign size={24} />
-                     <p className="text-sm font-medium">This is a simulation. No real money will be charged.</p>
-                  </div>
-                  <Input 
-                    label="Amount to Deposit"
-                    placeholder="Enter amount (e.g. 500)"
-                    type="number"
-                    value={depositAmount}
-                    onChange={(e) => setDepositAmount(e.target.value)}
-                    autoFocus
-                  />
-                  <div className="space-y-3">
-                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Quick Suggestions</p>
-                     <div className="flex gap-2">
-                        {['100', '500', '1000', '5000'].map(val => (
-                           <button 
-                             key={val}
-                             onClick={() => setDepositAmount(val)}
-                             className="px-4 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:border-primary-500 hover:text-primary-600 transition-all"
-                           >
-                              ${val}
-                           </button>
-                        ))}
-                     </div>
-                  </div>
-                  <div className="flex justify-end gap-3 pt-4">
-                     <Button variant="ghost" onClick={() => setShowDepositModal(false)}>Cancel</Button>
-                     <Button onClick={handleDeposit} isLoading={isDepositing}>Simulate Deposit</Button>
-                  </div>
-               </CardBody>
-            </Card>
-         </div>
-      )}
+      <Modal 
+        isOpen={showDepositModal}
+        onClose={() => setShowDepositModal(false)}
+        title="Add Funds to Wallet"
+      >
+        <div className="space-y-6">
+          <div className="p-4 bg-primary-50 rounded-xl flex items-center gap-4 border border-primary-100 text-primary-700">
+             <DollarSign size={24} />
+             <p className="text-sm font-medium">This is a simulation. No real money will be charged.</p>
+          </div>
+          <Input 
+            label="Amount to Deposit"
+            placeholder="Enter amount (e.g. 500)"
+            type="number"
+            value={depositAmount}
+            onChange={(e) => setDepositAmount(e.target.value)}
+            autoFocus
+          />
+          <div className="space-y-3">
+             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Quick Suggestions</p>
+             <div className="flex gap-2">
+                {['100', '500', '1000', '5000'].map(val => (
+                   <button 
+                     key={val}
+                     onClick={() => setDepositAmount(val)}
+                     className="px-4 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:border-primary-500 hover:text-primary-600 transition-all"
+                   >
+                      ${val}
+                   </button>
+                ))}
+             </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+             <Button variant="ghost" onClick={() => setShowDepositModal(false)}>Cancel</Button>
+             <Button onClick={handleDeposit} isLoading={isDepositing}>Simulate Deposit</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

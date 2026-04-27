@@ -91,7 +91,7 @@ exports.signDocument = async (req, res, next) => {
       return next(new ErrorResponse('Document not found', 404));
     }
 
-    const isShared = document.sharedWith.includes(req.user.id);
+    const isShared = document.sharedWith.some(id => id.toString() === req.user.id);
     const isOwner = document.owner.toString() === req.user.id;
 
     if (!isOwner && !isShared) {
@@ -99,17 +99,19 @@ exports.signDocument = async (req, res, next) => {
     }
 
     const { signatureData } = req.body;
-    document.signatures.push({
-      user: req.user.id,
-      signatureData
-    });
-    document.isSigned = true;
     
-    await document.save();
+    const updatedDocument = await Document.findByIdAndUpdate(
+      req.params.id,
+      {
+        $push: { signatures: { user: req.user.id, signatureData } },
+        $set: { isSigned: true }
+      },
+      { new: true, runValidators: true }
+    );
 
     res.status(200).json({
       success: true,
-      data: document
+      data: updatedDocument
     });
   } catch (err) {
     next(err);

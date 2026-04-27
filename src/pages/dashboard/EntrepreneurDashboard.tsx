@@ -7,29 +7,56 @@ import { Badge } from '../../components/ui/Badge';
 import { CollaborationRequestCard } from '../../components/collaboration/CollaborationRequestCard';
 import { InvestorCard } from '../../components/investor/InvestorCard';
 import { useAuth } from '../../context/AuthContext';
-import { CollaborationRequest } from '../../types';
-import { getRequestsForEntrepreneur } from '../../data/collaborationRequests';
-import { investors } from '../../data/users';
+import { CollaborationRequest, Investor } from '../../types';
+import * as collaborationService from '../../services/collaborationService';
+import * as userService from '../../services/userService';
+import * as meetingService from '../../services/meetingService';
+import toast from 'react-hot-toast';
 
 export const EntrepreneurDashboard: React.FC = () => {
   const { user } = useAuth();
   const [collaborationRequests, setCollaborationRequests] = useState<CollaborationRequest[]>([]);
-  const [recommendedInvestors, setRecommendedInvestors] = useState(investors.slice(0, 3));
+  const [recommendedInvestors, setRecommendedInvestors] = useState<Investor[]>([]);
+  const [meetingCount, setMeetingCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
-    if (user) {
-      // Load collaboration requests
-      const requests = getRequestsForEntrepreneur(user.id);
-      setCollaborationRequests(requests);
-    }
+    const fetchDashboardData = async () => {
+      if (!user) return;
+      try {
+        const [requestsRes, investorsRes, meetingsRes] = await Promise.all([
+          collaborationService.getRequests(),
+          userService.getInvestors(),
+          meetingService.getMeetings()
+        ]);
+        
+        if (requestsRes.success) setCollaborationRequests(requestsRes.data);
+        if (investorsRes.success) setRecommendedInvestors(investorsRes.data.slice(0, 3));
+        if (meetingsRes.success) setMeetingCount(meetingsRes.data.length);
+      } catch (error) {
+        toast.error('Failed to load dashboard data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
   }, [user]);
   
-  const handleRequestStatusUpdate = (requestId: string, status: 'accepted' | 'rejected') => {
-    setCollaborationRequests(prevRequests => 
-      prevRequests.map(req => 
-        req.id === requestId ? { ...req, status } : req
-      )
-    );
+  const handleRequestStatusUpdate = async (requestId: string, status: 'accepted' | 'rejected') => {
+    try {
+      const response = await collaborationService.updateRequestStatus(requestId, status);
+      if (response.success) {
+        setCollaborationRequests(prevRequests => 
+          prevRequests.map(req => 
+            req._id === requestId ? { ...req, status } : req
+          )
+        );
+        toast.success(`Request ${status}`);
+      }
+    } catch (error) {
+      toast.error('Failed to update request');
+    }
   };
   
   if (!user) return null;
@@ -93,7 +120,7 @@ export const EntrepreneurDashboard: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm font-medium text-accent-700">Upcoming Meetings</p>
-                <h3 className="text-xl font-semibold text-accent-900">2</h3>
+                <h3 className="text-xl font-semibold text-accent-900">{meetingCount}</h3>
               </div>
             </div>
           </CardBody>
@@ -106,8 +133,8 @@ export const EntrepreneurDashboard: React.FC = () => {
                 <TrendingUp size={20} className="text-success-700" />
               </div>
               <div>
-                <p className="text-sm font-medium text-success-700">Profile Views</p>
-                <h3 className="text-xl font-semibold text-success-900">24</h3>
+                <p className="text-sm font-medium text-success-700">Wallet Balance</p>
+                <h3 className="text-xl font-semibold text-success-900">${user.walletBalance || 0}</h3>
               </div>
             </div>
           </CardBody>
@@ -128,7 +155,7 @@ export const EntrepreneurDashboard: React.FC = () => {
                 <div className="space-y-4">
                   {collaborationRequests.map(request => (
                     <CollaborationRequestCard
-                      key={request.id}
+                      key={request._id}
                       request={request}
                       onStatusUpdate={handleRequestStatusUpdate}
                     />
@@ -160,7 +187,7 @@ export const EntrepreneurDashboard: React.FC = () => {
             <CardBody className="space-y-4">
               {recommendedInvestors.map(investor => (
                 <InvestorCard
-                  key={investor.id}
+                  key={investor._id}
                   investor={investor}
                   showActions={false}
                 />

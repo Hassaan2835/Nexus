@@ -18,13 +18,15 @@ export const InvestorCard: React.FC<InvestorCardProps> = ({
 }) => {
   const navigate = useNavigate();
   
+  const investorId = investor._id || investor.id;
+  
   const handleViewProfile = () => {
-    navigate(`/profile/investor/${investor.id}`);
+    navigate(`/profile/investor/${investorId}`);
   };
   
   const handleMessage = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click
-    navigate(`/chat/${investor.id}`);
+    navigate(`/chat/${investorId}`);
   };
   
   return (

@@ -6,8 +6,6 @@ import { Card, CardBody, CardFooter } from '../ui/Card';
 import { Avatar } from '../ui/Avatar';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
-import { findUserById } from '../../data/users';
-import { updateRequestStatus } from '../../data/collaborationRequests';
 import { formatDistanceToNow } from 'date-fns';
 
 interface CollaborationRequestCardProps {
@@ -20,30 +18,32 @@ export const CollaborationRequestCard: React.FC<CollaborationRequestCardProps> =
   onStatusUpdate
 }) => {
   const navigate = useNavigate();
-  const investor = findUserById(request.investorId);
+  // Backend returns populated investor or entrepreneur. 
+  // If we are in Entrepreneur dashboard, request.investor is populated.
+  const partner = (request as any).investor || (request as any).entrepreneur;
+  const partnerId = partner?._id || partner?.id;
   
-  if (!investor) return null;
+  if (!partner) return null;
   
   const handleAccept = () => {
-    updateRequestStatus(request.id, 'accepted');
     if (onStatusUpdate) {
-      onStatusUpdate(request.id, 'accepted');
+      onStatusUpdate(request._id || (request as any).id, 'accepted');
     }
   };
   
   const handleReject = () => {
-    updateRequestStatus(request.id, 'rejected');
     if (onStatusUpdate) {
-      onStatusUpdate(request.id, 'rejected');
+      onStatusUpdate(request._id || (request as any).id, 'rejected');
     }
   };
   
   const handleMessage = () => {
-    navigate(`/chat/${investor.id}`);
+    navigate(`/chat/${partnerId}`);
   };
   
   const handleViewProfile = () => {
-    navigate(`/profile/investor/${investor.id}`);
+    const role = partner.role || 'investor';
+    navigate(`/profile/${role}/${partnerId}`);
   };
   
   const getStatusBadge = () => {
@@ -65,15 +65,15 @@ export const CollaborationRequestCard: React.FC<CollaborationRequestCardProps> =
         <div className="flex justify-between items-start">
           <div className="flex items-start">
             <Avatar
-              src={investor.avatarUrl}
-              alt={investor.name}
+              src={partner.avatarUrl}
+              alt={partner.name}
               size="md"
-              status={investor.isOnline ? 'online' : 'offline'}
+              status={partner.isOnline ? 'online' : 'offline'}
               className="mr-3"
             />
             
             <div>
-              <h3 className="text-md font-semibold text-gray-900">{investor.name}</h3>
+              <h3 className="text-md font-semibold text-gray-900">{partner.name}</h3>
               <p className="text-sm text-gray-500">
                 {formatDistanceToNow(new Date(request.createdAt), { addSuffix: true })}
               </p>

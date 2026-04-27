@@ -1,8 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getConversationsForUser } from '../../data/messages';
+import * as chatService from '../../services/chatService';
 import { ChatUserList } from '../../components/chat/ChatUserList';
+import { useEffect, useState } from 'react';
 // import { MessageCircle } from 'lucide-react';
 
 export const MessagesPage: React.FC = () => {
@@ -11,7 +12,24 @@ export const MessagesPage: React.FC = () => {
   
   if (!user) return null;
   
-  const conversations = getConversationsForUser(user.id);
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchConversations = async () => {
+      try {
+        const response = await chatService.getConversations();
+        if (response.success) {
+          setConversations(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch conversations');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchConversations();
+  }, []);
   
   return (
     <div className="h-[calc(100vh-8rem)] bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden animate-fade-in">

@@ -53,7 +53,8 @@ export const InvestorProfile: React.FC = () => {
     );
   }
   
-  const isCurrentUser = currentUser?.id === investor.id;
+  const investorId = investor?._id || investor?.id;
+  const isCurrentUser = currentUser?.id === investorId;
   
   return (
     <div className="space-y-6 animate-fade-in">
@@ -90,7 +91,7 @@ export const InvestorProfile: React.FC = () => {
           
           <div className="mt-6 sm:mt-0 flex flex-col sm:flex-row gap-2 justify-center sm:justify-end">
             {!isCurrentUser && (
-              <Link to={`/chat/${investor.id}`}>
+              <Link to={`/chat/${investorId}`}>
                 <Button
                   leftIcon={<MessageCircle size={18} />}
                 >
@@ -100,12 +101,14 @@ export const InvestorProfile: React.FC = () => {
             )}
             
             {isCurrentUser && (
-              <Button
-                variant="outline"
-                leftIcon={<UserCircle size={18} />}
-              >
-                Edit Profile
-              </Button>
+              <Link to="/settings">
+                <Button
+                  variant="outline"
+                  leftIcon={<UserCircle size={18} />}
+                >
+                  Edit Profile
+                </Button>
+              </Link>
             )}
           </div>
         </CardBody>

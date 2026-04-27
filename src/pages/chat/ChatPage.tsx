@@ -8,7 +8,7 @@ import { ChatUserList } from '../../components/chat/ChatUserList';
 import { useAuth } from '../../context/AuthContext';
 import { socketService } from '../../services/socketService';
 import * as chatService from '../../services/chatService';
-import { findUserById } from '../../data/users'; // Fallback if backend doesn't have it yet
+import * as userService from '../../services/userService';
 
 export const ChatPage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -43,9 +43,16 @@ export const ChatPage: React.FC = () => {
   useEffect(() => {
     if (currentUser && userId) {
       loadMessages();
-      // Try to find partner from conversations or fallback
-      const partner = findUserById(userId);
-      setChatPartner(partner);
+      // Fetch partner info from backend
+      const fetchPartner = async () => {
+        try {
+          const res = await userService.getUserById(userId);
+          if (res.success) setChatPartner(res.data);
+        } catch (error) {
+          console.error('Failed to fetch partner info');
+        }
+      };
+      fetchPartner();
     } else {
       setMessages([]);
       setChatPartner(null);
@@ -60,20 +67,7 @@ export const ChatPage: React.FC = () => {
     try {
       const response = await chatService.getConversations();
       if (response.success) {
-        // Map to format ChatUserList expects
-        const formatted = response.data.map((c: any) => {
-          const partner = c.participants.find((p: any) => p._id !== currentUser?.id);
-          return {
-            id: partner?._id,
-            name: partner?.name,
-            avatarUrl: partner?.avatarUrl,
-            lastMessage: c.lastMessage?.content || 'No messages',
-            time: new Date(c.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            unreadCount: 0, // Backend could track this
-            isOnline: false // Socket could track this
-          };
-        });
-        setConversations(formatted);
+        setConversations(response.data);
       }
     } catch (error) {
       console.error('Error loading conversations', error);

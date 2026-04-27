@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const User = require('../models/User');
 const { ErrorResponse } = require('../middleware/errorHandler');
+const sendEmail = require('../utils/sendEmail');
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -52,17 +53,35 @@ exports.login = async (req, res, next) => {
     // Check for 2FA
     if (user.isTwoFactorEnabled) {
       // Generate 6-digit OTP
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      // Use fixed OTP for development to avoid email issues
+      const otp = process.env.NODE_ENV === 'development' ? '123456' : Math.floor(100000 + Math.random() * 900000).toString();
       
       user.twoFactorCode = crypto.createHash('sha256').update(otp).digest('hex');
       user.twoFactorCodeExpire = Date.now() + 10 * 60 * 1000; // 10 mins
       await user.save();
 
-      // Mock sending SMS/Email
-      console.log('--- 2FA OTP MOCK ---');
-      console.log(`To: ${user.email}`);
-      console.log(`Your OTP is: ${otp}`);
-      console.log('--------------------');
+      // Send 2FA Email
+      try {
+        await sendEmail({
+          email: user.email,
+          subject: 'Your Login Verification Code',
+          message: `Your verification code is: ${otp}. It will expire in 10 minutes.`,
+          html: `
+            <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+              <h2 style="color: #4f46e5;">Verification Required</h2>
+              <p>Hello ${user.name},</p>
+              <p>You are attempting to log in to Business Nexus. Please use the following code to verify your identity:</p>
+              <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0; color: #111827;">${otp}</div>
+              <p>This code will expire in 10 minutes. If you did not request this, please ignore this email.</p>
+            </div>
+          `
+        });
+      } catch (err) {
+        console.error('Email failed to send', err);
+        // We don't want to block login if email fails, but in production we might.
+        // For now, let's log the OTP so development can continue even if SMTP is not configured.
+        console.log(`To: ${user.email} | OTP: ${otp}`);
+      }
 
       return res.status(200).json({
         success: true,
@@ -86,7 +105,29 @@ exports.getMe = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      data: user
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatarUrl: user.avatarUrl,
+        bio: user.bio,
+        startupName: user.startupName,
+        industry: user.industry,
+        location: user.location,
+        foundedYear: user.foundedYear,
+        teamSize: user.teamSize,
+        fundingNeeded: user.fundingNeeded,
+        pitchSummary: user.pitchSummary,
+        investmentStage: user.investmentStage,
+        investmentInterests: user.investmentInterests,
+        minimumInvestment: user.minimumInvestment,
+        maximumInvestment: user.maximumInvestment,
+        totalInvestments: user.totalInvestments,
+        portfolioCompanies: user.portfolioCompanies,
+        isTwoFactorEnabled: user.isTwoFactorEnabled,
+        walletBalance: user.walletBalance
+      }
     });
   } catch (err) {
     next(err);
@@ -121,14 +162,23 @@ exports.forgotPassword = async (req, res, next) => {
   // Create reset URL
   const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
 
-  const message = `You are receiving this email because you (or someone else) has requested the reset of a password. Please make a PUT request to: \n\n ${resetUrl}`;
+  const message = `You are receiving this email because you (or someone else) has requested the reset of a password. Please click the link below to reset your password: \n\n ${resetUrl}`;
 
   try {
-    // In a real app, send email here. For now, log to console
-    console.log('--- PASSWORD RESET EMAIL MOCK ---');
-    console.log(`To: ${user.email}`);
-    console.log(message);
-    console.log('---------------------------------');
+    await sendEmail({
+      email: user.email,
+      subject: 'Password Reset Request',
+      message,
+      html: `
+        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+          <h2 style="color: #4f46e5;">Password Reset</h2>
+          <p>Hello ${user.name},</p>
+          <p>You are receiving this email because a password reset was requested for your account.</p>
+          <a href="${resetUrl}" style="display: inline-block; padding: 10px 20px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0;">Reset Password</a>
+          <p>If you did not request this, please ignore this email.</p>
+        </div>
+      `
+    });
 
     res.status(200).json({
       success: true,
@@ -238,8 +288,26 @@ exports.updateDetails = async (req, res, next) => {
     name: req.body.name,
     email: req.body.email,
     bio: req.body.bio,
-    avatarUrl: req.body.avatarUrl
+    avatarUrl: req.body.avatarUrl,
+    // Entrepreneur fields
+    startupName: req.body.startupName,
+    industry: req.body.industry,
+    location: req.body.location,
+    foundedYear: req.body.foundedYear,
+    teamSize: req.body.teamSize,
+    fundingNeeded: req.body.fundingNeeded,
+    pitchSummary: req.body.pitchSummary,
+    // Investor fields
+    investmentStage: req.body.investmentStage,
+    investmentInterests: req.body.investmentInterests,
+    minimumInvestment: req.body.minimumInvestment,
+    maximumInvestment: req.body.maximumInvestment,
+    totalInvestments: req.body.totalInvestments,
+    portfolioCompanies: req.body.portfolioCompanies
   };
+
+  // Remove undefined fields
+  Object.keys(fieldsToUpdate).forEach(key => fieldsToUpdate[key] === undefined && delete fieldsToUpdate[key]);
 
   try {
     const user = await User.findByIdAndUpdate(req.user.id, fieldsToUpdate, {
@@ -269,7 +337,23 @@ const sendTokenResponse = (user, statusCode, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
-      avatarUrl: user.avatarUrl
+      avatarUrl: user.avatarUrl,
+      bio: user.bio,
+      startupName: user.startupName,
+      industry: user.industry,
+      location: user.location,
+      foundedYear: user.foundedYear,
+      teamSize: user.teamSize,
+      fundingNeeded: user.fundingNeeded,
+      pitchSummary: user.pitchSummary,
+      investmentStage: user.investmentStage,
+      investmentInterests: user.investmentInterests,
+      minimumInvestment: user.minimumInvestment,
+      maximumInvestment: user.maximumInvestment,
+      totalInvestments: user.totalInvestments,
+      portfolioCompanies: user.portfolioCompanies,
+      isTwoFactorEnabled: user.isTwoFactorEnabled,
+      walletBalance: user.walletBalance
     }
   });
 };

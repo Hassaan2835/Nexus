@@ -7,20 +7,42 @@ import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { EntrepreneurCard } from '../../components/entrepreneur/EntrepreneurCard';
 import { useAuth } from '../../context/AuthContext';
-import { Entrepreneur } from '../../types';
-import { entrepreneurs } from '../../data/users';
-import { getRequestsFromInvestor } from '../../data/collaborationRequests';
+import { Entrepreneur, CollaborationRequest } from '../../types';
+import * as userService from '../../services/userService';
+import * as collaborationService from '../../services/collaborationService';
+import toast from 'react-hot-toast';
+import { useEffect } from 'react';
 
 export const InvestorDashboard: React.FC = () => {
   const { user } = useAuth();
+  const [entrepreneurs, setEntrepreneurs] = useState<Entrepreneur[]>([]);
+  const [collaborationRequests, setCollaborationRequests] = useState<CollaborationRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!user) return;
+      try {
+        const [entrepreneursRes, requestsRes] = await Promise.all([
+          userService.getEntrepreneurs(),
+          collaborationService.getRequests()
+        ]);
+        
+        if (entrepreneursRes.success) setEntrepreneurs(entrepreneursRes.data);
+        if (requestsRes.success) setCollaborationRequests(requestsRes.data);
+      } catch (error) {
+        toast.error('Failed to load dashboard data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [user]);
+
   if (!user) return null;
-  
-  // Get collaboration requests sent by this investor
-  const sentRequests = getRequestsFromInvestor(user.id);
-  const requestedEntrepreneurIds = sentRequests.map(req => req.entrepreneurId);
   
   // Filter entrepreneurs based on search and industry filters
   const filteredEntrepreneurs = entrepreneurs.filter(entrepreneur => {
@@ -139,7 +161,7 @@ export const InvestorDashboard: React.FC = () => {
               <div>
                 <p className="text-sm font-medium text-accent-700">Your Connections</p>
                 <h3 className="text-xl font-semibold text-accent-900">
-                  {sentRequests.filter(req => req.status === 'accepted').length}
+                  {collaborationRequests.filter(req => req.status === 'accepted').length}
                 </h3>
               </div>
             </div>
@@ -159,7 +181,7 @@ export const InvestorDashboard: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredEntrepreneurs.map(entrepreneur => (
                   <EntrepreneurCard
-                    key={entrepreneur.id}
+                    key={entrepreneur._id}
                     entrepreneur={entrepreneur}
                   />
                 ))}

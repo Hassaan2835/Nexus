@@ -10,21 +10,14 @@ interface ChatMessageProps {
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({ message, isCurrentUser }) => {
-  const user = findUserById(message.senderId);
-  
-  if (!user) return null;
-  
   return (
     <div
       className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-4 animate-fade-in`}
     >
       {!isCurrentUser && (
-        <Avatar
-          src={user.avatarUrl}
-          alt={user.name}
-          size="sm"
-          className="mr-2 self-end"
-        />
+        <div className="w-8 h-8 rounded-full bg-gray-200 mr-2 self-end flex items-center justify-center text-[10px] text-gray-500 font-bold uppercase">
+          {message.senderId.substring(0, 2)}
+        </div>
       )}
       
       <div className={`flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}`}>
@@ -38,18 +31,15 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, isCurrentUser
           <p className="text-sm">{message.content}</p>
         </div>
         
-        <span className="text-xs text-gray-500 mt-1">
+        <span className="text-[10px] text-gray-400 mt-1">
           {formatDistanceToNow(new Date(message.timestamp), { addSuffix: true })}
         </span>
       </div>
       
       {isCurrentUser && (
-        <Avatar
-          src={user.avatarUrl}
-          alt={user.name}
-          size="sm"
-          className="ml-2 self-end"
-        />
+        <div className="w-8 h-8 rounded-full bg-primary-100 ml-2 self-end flex items-center justify-center text-[10px] text-primary-600 font-bold uppercase">
+          Me
+        </div>
       )}
     </div>
   );
