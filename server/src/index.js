@@ -58,6 +58,7 @@ app.use(limiter);
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/meetings', require('./routes/meetings'));
+app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/documents', require('./routes/documents'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/messages', require('./routes/messages'));

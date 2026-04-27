@@ -320,20 +320,156 @@ export const SettingsPage: React.FC = () => {
             </Card>
           )}
 
-          {activeTab !== 'profile' && activeTab !== 'security' && (
+          {activeTab === 'notifications' && (
             <Card className="animate-fade-in">
-              <CardBody className="flex flex-col items-center justify-center py-12">
-                <div className="bg-gray-100 p-4 rounded-full mb-4">
-                   {navItems.find(i => i.id === activeTab)?.icon}
+              <CardHeader>
+                <h2 className="text-lg font-medium text-gray-900">Notification Preferences</h2>
+              </CardHeader>
+              <CardBody className="space-y-4">
+                {[
+                  { id: 'email_messages', label: 'Email for new messages', desc: 'Receive an email whenever someone sends you a message' },
+                  { id: 'email_meetings', label: 'Email for meetings', desc: 'Get notified via email when a meeting is scheduled' },
+                  { id: 'email_deals', label: 'Email for deal updates', desc: 'Stay updated on your investment deals via email' },
+                  { id: 'push_all', label: 'Browser Push Notifications', desc: 'Enable real-time desktop notifications' }
+                ].map(pref => (
+                  <div key={pref.id} className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">{pref.label}</p>
+                      <p className="text-xs text-gray-500">{pref.desc}</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer" defaultChecked />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                    </label>
+                  </div>
+                ))}
+                <div className="flex justify-end mt-6">
+                   <Button onClick={() => alert('Notification settings saved!')}>Save Preferences</Button>
                 </div>
-                <h2 className="text-xl font-bold text-gray-900 capitalize">{activeTab} Settings</h2>
-                <p className="text-gray-500 mt-2 text-center max-w-sm">
-                  The {activeTab} settings module is currently under development. 
-                  Check back soon for more features!
-                </p>
-                <Button className="mt-6" variant="outline" onClick={() => setActiveTab('profile')}>
-                  Back to Profile
-                </Button>
+              </CardBody>
+            </Card>
+          )}
+
+          {activeTab === 'language' && (
+            <Card className="animate-fade-in">
+              <CardHeader>
+                <h2 className="text-lg font-medium text-gray-900">Language & Region</h2>
+              </CardHeader>
+              <CardBody className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Display Language</label>
+                  <select className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                    <option value="en">English (United States)</option>
+                    <option value="es">Español</option>
+                    <option value="fr">Français</option>
+                    <option value="de">Deutsch</option>
+                    <option value="zh">中文</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Time Zone</label>
+                  <select className="w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                    <option value="utc">UTC (Coordinated Universal Time)</option>
+                    <option value="est">EST (Eastern Standard Time)</option>
+                    <option value="pst">PST (Pacific Standard Time)</option>
+                    <option value="pk">PKT (Pakistan Standard Time)</option>
+                  </select>
+                </div>
+                <div className="flex justify-end">
+                   <Button onClick={() => alert('Language settings updated!')}>Update Settings</Button>
+                </div>
+              </CardBody>
+            </Card>
+          )}
+
+          {activeTab === 'appearance' && (
+            <Card className="animate-fade-in">
+              <CardHeader>
+                <h2 className="text-lg font-medium text-gray-900">Theme & Appearance</h2>
+              </CardHeader>
+              <CardBody className="space-y-8">
+                <div className="grid grid-cols-2 gap-4">
+                  <button className="p-4 border-2 border-primary-600 rounded-xl bg-white text-left group">
+                    <div className="w-full h-24 bg-gray-50 rounded-lg mb-3 border border-gray-100 relative overflow-hidden">
+                       <div className="absolute top-2 left-2 w-1/2 h-2 bg-gray-200 rounded"></div>
+                       <div className="absolute top-6 left-2 w-3/4 h-2 bg-gray-200 rounded"></div>
+                    </div>
+                    <p className="text-sm font-bold text-gray-900">Light Mode</p>
+                    <p className="text-xs text-gray-500">Classic clean look</p>
+                  </button>
+                  <button className="p-4 border-2 border-gray-200 rounded-xl bg-gray-900 text-left group hover:border-gray-400">
+                    <div className="w-full h-24 bg-gray-800 rounded-lg mb-3 border border-gray-700 relative overflow-hidden">
+                       <div className="absolute top-2 left-2 w-1/2 h-2 bg-gray-700 rounded"></div>
+                       <div className="absolute top-6 left-2 w-3/4 h-2 bg-gray-700 rounded"></div>
+                    </div>
+                    <p className="text-sm font-bold text-white">Dark Mode</p>
+                    <p className="text-xs text-gray-400">Easier on the eyes</p>
+                  </button>
+                </div>
+                
+                <div className="space-y-4">
+                   <p className="text-sm font-medium text-gray-900">Primary Color</p>
+                   <div className="flex gap-3">
+                      {['#2563eb', '#7c3aed', '#db2777', '#059669', '#d97706'].map(color => (
+                        <button key={color} className="w-8 h-8 rounded-full border-2 border-white ring-2 ring-transparent hover:ring-gray-300" style={{backgroundColor: color}}></button>
+                      ))}
+                   </div>
+                </div>
+              </CardBody>
+            </Card>
+          )}
+
+          {activeTab === 'billing' && (
+            <Card className="animate-fade-in">
+              <CardHeader>
+                <h2 className="text-lg font-medium text-gray-900">Billing & Subscription</h2>
+              </CardHeader>
+              <CardBody className="space-y-6">
+                <div className="bg-gradient-to-r from-primary-600 to-indigo-700 rounded-2xl p-6 text-white shadow-xl shadow-primary-200">
+                  <div className="flex justify-between items-start mb-8">
+                    <div>
+                      <p className="text-primary-100 text-xs uppercase font-black tracking-widest mb-1">Current Plan</p>
+                      <h3 className="text-2xl font-black">Nexus Pro {user.role === 'investor' ? 'Investor' : 'Startup'}</h3>
+                    </div>
+                    <Badge variant="success" className="bg-white/20 text-white border-none backdrop-blur-md">Active</Badge>
+                  </div>
+                  
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <p className="text-primary-100 text-xs font-bold mb-1">Next Billing Date</p>
+                      <p className="font-medium">May 27, 2026</p>
+                    </div>
+                    <div className="text-right">
+                       <p className="text-3xl font-black">$49.00<span className="text-sm font-normal text-primary-100">/mo</span></p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <Card className="border border-gray-100 bg-gray-50/50 shadow-none">
+                      <CardBody className="p-4">
+                         <p className="text-xs font-bold text-gray-500 uppercase mb-2 tracking-tighter">Payment Method</p>
+                         <div className="flex items-center gap-3">
+                            <CreditCard className="text-gray-400" />
+                            <span className="text-sm font-bold text-gray-900">•••• •••• •••• 4242</span>
+                         </div>
+                      </CardBody>
+                   </Card>
+                   <Card className="border border-gray-100 bg-gray-50/50 shadow-none">
+                      <CardBody className="p-4">
+                         <p className="text-xs font-bold text-gray-500 uppercase mb-2 tracking-tighter">Wallet Balance</p>
+                         <div className="flex items-center gap-3">
+                            <span className="text-lg font-black text-primary-600">${user.walletBalance || '1,250.00'}</span>
+                            <Button variant="link" size="sm" className="h-auto p-0">Top up</Button>
+                         </div>
+                      </CardBody>
+                   </Card>
+                </div>
+                
+                <div className="flex justify-between pt-4">
+                   <Button variant="outline" size="sm">Download Invoices</Button>
+                   <Button variant="outline" size="sm" className="text-error-600 hover:text-error-700 hover:bg-error-50 border-gray-200">Cancel Subscription</Button>
+                </div>
               </CardBody>
             </Card>
           )}

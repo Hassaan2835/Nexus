@@ -1,6 +1,7 @@
 const Message = require('../models/Message');
 const Conversation = require('../models/Conversation');
 const { ErrorResponse } = require('../middleware/errorHandler');
+const { createNotification } = require('./notificationController');
 
 // @desc    Get user conversations
 // @route   GET /api/messages/conversations
@@ -74,6 +75,15 @@ exports.sendMessage = async (req, res, next) => {
     conversation.lastMessage = message._id;
     conversation.updatedAt = Date.now();
     await conversation.save();
+    
+    // Create notification for receiver
+    await createNotification({
+      recipient: receiverId,
+      sender: req.user.id,
+      type: 'message',
+      content: `sent you a message: "${content.substring(0, 30)}${content.length > 30 ? '...' : ''}"`,
+      link: `/chat/${req.user.id}`
+    });
 
     res.status(201).json({
       success: true,

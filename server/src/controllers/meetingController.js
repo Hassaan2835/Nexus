@@ -1,5 +1,6 @@
 const Meeting = require('../models/Meeting');
 const { ErrorResponse } = require('../middleware/errorHandler');
+const { createNotification } = require('./notificationController');
 
 // @desc    Create meeting
 // @route   POST /api/meetings
@@ -41,10 +42,21 @@ exports.createMeeting = async (req, res, next) => {
       description,
       organizer: req.user.id,
       participants,
-      date,
+      date: new Date(date),
       startTime,
       endTime
     });
+
+    // Create notifications for all participants
+    for (const participantId of participants) {
+      await createNotification({
+        recipient: participantId,
+        sender: req.user.id,
+        type: 'meeting',
+        content: `scheduled a new meeting: "${title}"`,
+        link: '/meetings'
+      });
+    }
 
     res.status(201).json({
       success: true,
