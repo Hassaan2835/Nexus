@@ -19,6 +19,24 @@ export const SettingsPage: React.FC = () => {
   const [isSavingProfile, setIsSavingProfile] = React.useState(false);
   const [theme, setTheme] = React.useState<'light' | 'dark'>('light');
   const [primaryColor, setPrimaryColor] = React.useState('#2563eb');
+
+  React.useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark-theme');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      root.classList.remove('dark-theme');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [theme]);
+
+  React.useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+    }
+  }, []);
   
   const [profileData, setProfileData] = React.useState({
     name: user?.name || '',
