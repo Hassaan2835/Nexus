@@ -1,3 +1,44 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Quick Dark Mode Overrides */
+html.dark-theme, html.dark-theme body {
+  background-color: #111827 !important;
+  color: #f3f4f6 !important;
+}
+.dark-theme .bg-white, .dark-theme .bg-white\/20 {
+  background-color: #1f2937 !important;
+}
+.dark-theme .text-gray-900 {
+  color: #f3f4f6 !important;
+}
+.dark-theme .bg-gray-50 {
+  background-color: #111827 !important;
+}
+.dark-theme .border-gray-200, .dark-theme .border-gray-100, .dark-theme .border-gray-300 {
+  border-color: #374151 !important;
+}
+.dark-theme .text-gray-500, .dark-theme .text-gray-600 {
+  color: #9ca3af !important;
+}
+.dark-theme .text-gray-700, .dark-theme .text-gray-800 {
+  color: #e5e7eb !important;
+}
+.dark-theme .shadow-md, .dark-theme .shadow-sm {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3) !important;
+}
+.dark-theme input, .dark-theme select, .dark-theme textarea {
+  background-color: #374151 !important;
+  color: #f3f4f6 !important;
+  border-color: #4b5563 !important;
+}
+.dark-theme .bg-primary-50, .dark-theme .bg-indigo-50, .dark-theme .bg-blue-50 {
+  background-color: rgba(37, 99, 235, 0.15) !important;
+}
+.dark-theme .text-primary-600, .dark-theme .text-primary-700 {
+  color: #60a5fa !important;
+}
+.dark-theme .border-primary-500, .dark-theme .border-primary-600 {
+  border-color: #3b82f6 !important;
+}
