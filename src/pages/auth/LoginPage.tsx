@@ -186,11 +186,9 @@ export const LoginPage: React.FC = () => {
                 <p className="text-sm text-gray-600 mt-2">
                   We've sent a 6-digit code to <span className="font-semibold text-gray-900">{email}</span>.
                   Please enter the code below to continue.
-                  {import.meta.env.DEV && (
-                    <div className="mt-2 text-xs font-medium text-primary-600 bg-primary-50 p-2 rounded">
-                      Demo Mode: Use code <span className="font-bold underline">123456</span>
-                    </div>
-                  )}
+                  <div className="mt-2 text-xs font-medium text-primary-600 bg-primary-50 p-2 rounded">
+                    Demo Mode: Use code <span className="font-bold underline">123456</span>
+                  </div>
                 </p>
               </div>
 

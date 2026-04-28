@@ -53,8 +53,8 @@ exports.login = async (req, res, next) => {
     // Check for 2FA
     if (user.isTwoFactorEnabled) {
       // Generate 6-digit OTP
-      // Use fixed OTP for development to avoid email issues
-      const otp = process.env.NODE_ENV === 'development' ? '123456' : Math.floor(100000 + Math.random() * 900000).toString();
+      // ALWAYS use fixed OTP for project demo
+      const otp = '123456';
       
       user.twoFactorCode = crypto.createHash('sha256').update(otp).digest('hex');
       user.twoFactorCodeExpire = Date.now() + 10 * 60 * 1000; // 10 mins
