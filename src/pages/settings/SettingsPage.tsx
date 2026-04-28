@@ -17,6 +17,8 @@ export const SettingsPage: React.FC = () => {
   });
   const [isChangingPassword, setIsChangingPassword] = React.useState(false);
   const [isSavingProfile, setIsSavingProfile] = React.useState(false);
+  const [theme, setTheme] = React.useState<'light' | 'dark'>('light');
+  const [primaryColor, setPrimaryColor] = React.useState('#2563eb');
   
   const [profileData, setProfileData] = React.useState({
     name: user?.name || '',
@@ -389,7 +391,10 @@ export const SettingsPage: React.FC = () => {
               </CardHeader>
               <CardBody className="space-y-8">
                 <div className="grid grid-cols-2 gap-4">
-                  <button className="p-4 border-2 border-primary-600 rounded-xl bg-white text-left group">
+                  <button 
+                    onClick={() => setTheme('light')}
+                    className={`p-4 border-2 rounded-xl text-left group transition-all ${theme === 'light' ? 'border-primary-600 bg-white ring-4 ring-primary-50 shadow-md' : 'border-gray-200 bg-white hover:border-gray-300'}`}
+                  >
                     <div className="w-full h-24 bg-gray-50 rounded-lg mb-3 border border-gray-100 relative overflow-hidden">
                        <div className="absolute top-2 left-2 w-1/2 h-2 bg-gray-200 rounded"></div>
                        <div className="absolute top-6 left-2 w-3/4 h-2 bg-gray-200 rounded"></div>
@@ -397,7 +402,10 @@ export const SettingsPage: React.FC = () => {
                     <p className="text-sm font-bold text-gray-900">Light Mode</p>
                     <p className="text-xs text-gray-500">Classic clean look</p>
                   </button>
-                  <button className="p-4 border-2 border-gray-200 rounded-xl bg-gray-900 text-left group hover:border-gray-400">
+                  <button 
+                    onClick={() => setTheme('dark')}
+                    className={`p-4 border-2 rounded-xl text-left group transition-all ${theme === 'dark' ? 'border-primary-500 bg-gray-900 ring-4 ring-primary-50 shadow-md' : 'border-gray-700 bg-gray-900 hover:border-gray-600'}`}
+                  >
                     <div className="w-full h-24 bg-gray-800 rounded-lg mb-3 border border-gray-700 relative overflow-hidden">
                        <div className="absolute top-2 left-2 w-1/2 h-2 bg-gray-700 rounded"></div>
                        <div className="absolute top-6 left-2 w-3/4 h-2 bg-gray-700 rounded"></div>
@@ -411,7 +419,12 @@ export const SettingsPage: React.FC = () => {
                    <p className="text-sm font-medium text-gray-900">Primary Color</p>
                    <div className="flex gap-3">
                       {['#2563eb', '#7c3aed', '#db2777', '#059669', '#d97706'].map(color => (
-                        <button key={color} className="w-8 h-8 rounded-full border-2 border-white ring-2 ring-transparent hover:ring-gray-300" style={{backgroundColor: color}}></button>
+                        <button 
+                          key={color} 
+                          onClick={() => setPrimaryColor(color)}
+                          className={`w-8 h-8 rounded-full border-2 border-white ring-2 transition-all ${primaryColor === color ? 'ring-primary-600 scale-110 shadow-md' : 'ring-transparent hover:ring-gray-300'}`} 
+                          style={{backgroundColor: color}}
+                        ></button>
                       ))}
                    </div>
                 </div>
