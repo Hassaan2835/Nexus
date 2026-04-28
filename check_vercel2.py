@@ -6,8 +6,10 @@ match = re.search(r'src="(/assets/index-[^"]+\.js)"', r.text)
 if match:
     js_url = 'https://nexus-six-kappa-43.vercel.app' + match.group(1)
     js_code = requests.get(js_url).text
-    baseURL_match = re.search(r'baseURL:([^,}]+)', js_code)
-    if baseURL_match:
-        print("FOUND BASE URL: ", baseURL_match.group(1))
+    idx = js_code.find("nexus-backend-rzxg")
+    if idx != -1:
+        start = max(0, idx - 100)
+        end = min(len(js_code), idx + 100)
+        print("CONTEXT:", js_code[start:end])
     else:
-        print("BASE URL NOT FOUND")
+        print("Not found")
